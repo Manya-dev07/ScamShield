@@ -1,6 +1,7 @@
 import streamlit as st
 from analyzer import analyze_with_ai
 from rules import detect_signals
+from risk_engine import calculate_risk
 
 st.set_page_config(
     page_title="ScamShield",
@@ -17,31 +18,42 @@ message = st.text_area(
     height=180
 )
 
-
 if st.button("Analyze", type="primary"):
 
     if message.strip():
 
         # Rule-based analysis
-        score, signals = detect_signals(message)
+        rule_score, signals = detect_signals(message)
 
         # AI analysis
         with st.spinner("Analyzing message..."):
             ai_analysis = analyze_with_ai(message)
 
+        # Final risk assessment
+        final_score, risk_level = calculate_risk(
+            rule_score,
+            ai_analysis
+        )
+
         st.divider()
 
-        # Risk level
-        if score >= 70:
-            st.error(f"RISK SCORE: {score}/100 — HIGH RISK")
+        # Final risk result
+        if risk_level == "HIGH":
+            st.error(
+                f"RISK SCORE: {final_score}/100 — HIGH RISK"
+            )
 
-        elif score >= 40:
-            st.warning(f"RISK SCORE: {score}/100 — MEDIUM RISK")
+        elif risk_level == "MEDIUM":
+            st.warning(
+                f"RISK SCORE: {final_score}/100 — MEDIUM RISK"
+            )
 
         else:
-            st.success(f"RISK SCORE: {score}/100 — LOW RISK")
+            st.success(
+                f"RISK SCORE: {final_score}/100 — LOW RISK"
+            )
 
-        # AI Analysis
+        # AI explanation
         st.subheader("AI Analysis")
         st.write(ai_analysis)
 
@@ -57,13 +69,13 @@ if st.button("Analyze", type="primary"):
         # Recommendation
         st.subheader("Recommended Action")
 
-        if score >= 70:
+        if risk_level == "HIGH":
             st.write(
                 "Do not click suspicious links or share sensitive information. "
                 "Verify the request through the organization's official website or app."
             )
 
-        elif score >= 40:
+        elif risk_level == "MEDIUM":
             st.write(
                 "Be cautious. Verify the sender and request through an official channel."
             )
