@@ -40,9 +40,21 @@ Important:
 - Do not invent information that is not present.
 """
 
-    response = client.models.generate_content(
-        model="gemini-3.5-flash-lite",
-        contents=prompt
-    )
+    try:
+        response = client.models.generate_content(
+            model="gemini-3.5-flash-lite",
+            contents=prompt
+        )
 
-    return response.text
+        return response.text
+
+    except Exception:
+        return (
+            "Risk: UNKNOWN\n\n"
+            "Why:\n"
+            "AI analysis is temporarily unavailable. "
+            "ScamShield will continue using its rule-based risk signals.\n\n"
+            "Advice:\n"
+            "Do not click suspicious links or share sensitive information. "
+            "Verify unexpected requests through an official channel."
+        )
