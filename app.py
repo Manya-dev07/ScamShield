@@ -1,4 +1,5 @@
 import streamlit as st
+from analyzer import analyze_with_ai
 from rules import detect_signals
 
 st.set_page_config(
@@ -12,87 +13,21 @@ st.subheader("AI-powered scam risk analysis")
 
 message = st.text_area(
     "Paste a suspicious message here",
-    placeholder="Example: Your account will be blocked today. Click here to verify..."
+    placeholder="Example: Your account will be blocked today. Click here to verify...",
+    height=180
 )
 
 
-def analyze_message(message):
-
-    text = message.lower()
-
-    signals = []
-    score = 0
-
-    # 1. Urgency detection
-    urgency_words = [
-        "urgent",
-        "immediately",
-        "act now",
-        "today",
-        "blocked",
-        "expires"
-    ]
-
-    if any(word in text for word in urgency_words):
-        signals.append("Artificial urgency detected")
-        score += 20
-
-    # 2. Sensitive information detection
-    sensitive_words = [
-        "otp",
-        "pin",
-        "password",
-        "kyc",
-        "cvv",
-        "account number"
-    ]
-
-    if any(word in text for word in sensitive_words):
-        signals.append("Sensitive information requested")
-        score += 20
-
-    # 3. Financial context detection
-    financial_words = [
-        "bank",
-        "upi",
-        "payment",
-        "refund",
-        "money",
-        "account"
-    ]
-
-    if any(word in text for word in financial_words):
-        signals.append("Financial context detected")
-        score += 15
-
-    # 4. Suspicious URL detection
-    if "http://" in text or "https://" in text or "www." in text:
-
-        suspicious_patterns = [
-            ".xyz",
-            ".tk",
-            ".ml",
-            ".ga",
-            "verify",
-            "kyc",
-            "login"
-        ]
-
-        if any(pattern in text for pattern in suspicious_patterns):
-            signals.append("Potentially suspicious URL detected")
-            score += 30
-
-    # Make sure score never goes above 100
-    score = min(score, 100)
-
-    return score, signals
-
-
-if st.button("Analyze"):
+if st.button("Analyze", type="primary"):
 
     if message.strip():
 
-        score, signals = analyze_message(message)
+        # Rule-based analysis
+        score, signals = detect_signals(message)
+
+        # AI analysis
+        with st.spinner("Analyzing message..."):
+            ai_analysis = analyze_with_ai(message)
 
         st.divider()
 
@@ -106,7 +41,11 @@ if st.button("Analyze"):
         else:
             st.success(f"RISK SCORE: {score}/100 — LOW RISK")
 
-        # Signals
+        # AI Analysis
+        st.subheader("AI Analysis")
+        st.write(ai_analysis)
+
+        # Detected signals
         st.subheader("Detected Signals")
 
         if signals:
