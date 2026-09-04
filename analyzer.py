@@ -6,35 +6,55 @@ load_dotenv()
 
 api_key = os.getenv("GEMINI_API_KEY")
 
+if not api_key:
+    raise ValueError("GEMINI_API_KEY not found in .env file")
+
 client = genai.Client(api_key=api_key)
 
 
 def analyze_with_ai(message):
+
     prompt = f"""
-You are ScamShield, a cybersecurity assistant.
+You are ScamShield, an AI cybersecurity assistant.
 
-Analyze the following message for potential scam or phishing signals.
+Analyze the following message for potential scam, phishing, or fraud signals.
 
-Message:
+MESSAGE:
 {message}
 
-Give a concise analysis in this exact format:
+Give your analysis in exactly this format:
 
 Risk: LOW, MEDIUM, or HIGH
 
 Why:
-Explain in 2-3 sentences why the message may or may not be risky.
+Give a clear explanation in 2-3 sentences. Mention the specific suspicious
+patterns found in the message.
 
 Advice:
 Give 1-2 practical safety actions the user should take.
 
-Do not claim that a message is definitely a scam. Use terms like
-"potential scam", "suspicious", or "risk".
+Important:
+- Do not claim the message is definitely a scam.
+- Use phrases such as "potential scam", "potentially suspicious", or "high-risk".
+- Focus on observable evidence in the message.
+- Do not invent information that is not present.
 """
 
-    response = client.models.generate_content(
-        model="gemini-3.5-flash-lite",
-        contents=prompt
-    )
+    try:
+        response = client.models.generate_content(
+            model="gemini-3.5-flash-lite",
+            contents=prompt
+        )
 
-    return response.text
+        return response.text
+
+    except Exception:
+        return (
+            "Risk: UNKNOWN\n\n"
+            "Why:\n"
+            "AI analysis is temporarily unavailable. "
+            "ScamShield will continue using its rule-based risk signals.\n\n"
+            "Advice:\n"
+            "Do not click suspicious links or share sensitive information. "
+            "Verify unexpected requests through an official channel."
+        )
