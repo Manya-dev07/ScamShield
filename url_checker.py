@@ -38,8 +38,8 @@ SUSPICIOUS_KEYWORDS = {
 }
 
 
-# TLDs that are sometimes seen in suspicious/spam links.
-# Having one of these does NOT mean the URL is malicious.
+# TLDs that can sometimes appear in suspicious/spam links.
+# A TLD alone does NOT prove that a URL is malicious.
 UNUSUAL_TLDS = {
     "xyz",
     "top",
@@ -67,11 +67,11 @@ def is_ip_address(hostname):
 
 def analyze_url(url):
     """
-    Analyze a URL using simple rule-based checks.
+    Analyze a URL using rule-based risk signals.
 
     Returns:
         score: risk score from 0 to 100
-        signals: list of detected suspicious signals
+        signals: list of detected URL risk signals
     """
 
     score = 0
@@ -83,19 +83,17 @@ def analyze_url(url):
     if not url:
         return 0, ["No URL was provided."]
 
-    # Add https:// temporarily if the user forgot the scheme.
-    # This makes urlparse able to understand domains like example.com.
+    # Add HTTPS temporarily if the user forgot the scheme
     url_to_parse = url
 
     if "://" not in url_to_parse:
         url_to_parse = "https://" + url_to_parse
 
     parsed = urlparse(url_to_parse)
-
     hostname = parsed.hostname
 
     # --------------------------------------------------
-    # 1. Check whether the URL has a valid hostname
+    # 1. Check hostname
     # --------------------------------------------------
 
     if not hostname:
@@ -109,15 +107,12 @@ def analyze_url(url):
 
     if parsed.scheme.lower() == "http":
         signals.append(
-            "HTTP is used instead of HTTPS, so the connection is not encrypted in the usual way."
+            "HTTP is used instead of HTTPS, which provides weaker transport security."
         )
-        score += 10
-
-    elif parsed.scheme.lower() == "https":
-        signals.append("HTTPS is used.")
+        score += 15
 
     # --------------------------------------------------
-    # 3. IP address instead of a normal domain
+    # 3. IP address instead of normal domain
     # --------------------------------------------------
 
     if is_ip_address(hostname):
@@ -153,7 +148,10 @@ def analyze_url(url):
             "Potentially suspicious keywords found: "
             + ", ".join(sorted(found_keywords))
         )
-        score += min(len(found_keywords) * 5, 20)
+
+        # Each suspicious keyword adds 10 points.
+        # Cap keyword contribution at 40.
+        score += min(len(found_keywords) * 10, 40)
 
     # --------------------------------------------------
     # 6. Unusual TLD
@@ -166,7 +164,7 @@ def analyze_url(url):
             signals.append(
                 f"The domain uses the .{tld} TLD, which can sometimes appear in suspicious links."
             )
-            score += 10
+            score += 20
 
     # --------------------------------------------------
     # 7. Excessive subdomains
@@ -186,7 +184,8 @@ def analyze_url(url):
 
     if "xn--" in hostname:
         signals.append(
-            "The domain contains punycode, which can sometimes be used to make domains look similar to legitimate ones."
+            "The domain contains punycode, which can sometimes be used "
+            "to make domains look similar to legitimate ones."
         )
         score += 15
 
@@ -230,12 +229,28 @@ def analyze_url(url):
             score += 5
 
     # --------------------------------------------------
+    # 12. Combined high-risk pattern
+    # --------------------------------------------------
+    # A combination of several independent suspicious signals
+    # is more concerning than any single signal by itself.
+
+    if (
+        parsed.scheme.lower() == "http"
+        and found_keywords
+        and "." in hostname
+        and hostname.split(".")[-1] in UNUSUAL_TLDS
+    ):
+        signals.append(
+            "Multiple independent URL risk signals occur together."
+        )
+        score += 15
+
+    # --------------------------------------------------
     # Final score
     # --------------------------------------------------
 
     score = min(score, 100)
 
-    # If nothing suspicious was found
     if not signals:
         signals.append(
             "No obvious suspicious URL patterns were detected."
